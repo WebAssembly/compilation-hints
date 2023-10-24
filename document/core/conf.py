@@ -66,10 +66,10 @@ editor = u'Andreas Rossberg (editor)'
 logo = 'static/webassembly.png'
 
 # The name of the GitHub repository this resides in
-repo = 'spec'
+repo = 'compilation-hints'
 
 # The name of the proposal it represents, if any
-proposal = ''
+proposal = 'compilation-hints'
 
 # The draft version string (clear out for release cuts)
 draft = ' (Draft ' + date.today().strftime("%Y-%m-%d") + ')'
