@@ -19,12 +19,13 @@ One interesting aspect to other environments where profiling feedback is to be i
 Based on the [branch hinting proposal](https://github.com/WebAssembly/branch-hinting), we extend this mechanism by adding additional custom sections for extra functionality. This can be integrated with the [annotations proposal](https://github.com/WebAssembly/annotations) for the ability to generate these from text format and for round-trips to the text format to preserve them.
 
 Each family of hints is bundled in a respective custom section following the example of branch hints. These sections all have the naming convention `metadata.code.*` and follow the structure
-
   * *function index* |U32|
   * a vector of hints with entries
     * *byte offset* |U32| of the hinted instruction from the beginning of the function body (0 for function level hints),
     * *hint length* |U32| indicating the number of values each hint requires,
     * *values* |U32| with the actual hint information
+
+*Note: If custom annotations support a `metadata.function.*` namespace, the byte offset could be dropped for function-level annotations.*
 
 The following contains a list of hints to be included in the first version of the proposal. Future extensions can be added as necessity arises. This also includes annotations outside of function or instruction level like annotations for memories, etc.
 
@@ -32,7 +33,6 @@ The following contains a list of hints to be included in the first version of th
 ### Compilation order
 
 The section `metadata.code.compilation_order` contains the order in which functions should be compiled in order to minimize wait times until the compilation is completed. This is especially relevant during instantiation and startup but might also be relevant later.
-
   * *byte offset* |U32| with value 0 (function level only)
   * *hint length* |U32| with value 2
   * *compilation order* |U32| starting at 0 (functions with the same order value will be compiled in an arbitrary order but before functions with a higher order value)
@@ -44,6 +44,8 @@ The *hotness* attribute has no pre-defined meaning. The larger the value, to mor
 
 It is expected and even desired that not all functions are annotated to keep this section small. It is up to th engine if and when the unannotated functions are compiled. It's recommended that these functions get compiled last or lazily on demand.
 
+*Note: This should be moved to `metadata.function.compilation_order` without the byte offset if such a namespace will be supported by custom annotations.*
+
 
 ### Call targets
 
@@ -52,7 +54,6 @@ When dealing with `call_indirect` or `call_ref`, often inefficient code is gener
 This is especially interesting if functions need to be compiled to the top tier early on, either because they're annotated with a low compilation order, because eager compilation or even AOT compilation is desired.
 
 The `metadata.code.call_targets` section contains instruction level annotations for all relevant call targets identified by their function indexes.
-
   * *byte offset* |U32| from the beginning of the function to the wire byte index of the call instruction (this must be a `call_ref` or a `call_indirect`, otherwise the hint will be ignored)
   * *hint length* |U32| (always even, 2 entries for each call target)
   * call target information
@@ -62,3 +63,22 @@ The `metadata.code.call_targets` section contains instruction level annotations 
 The accumulated call frequency must add up to 100 or less. If it is less than 100, then other call targets that are not listed are responsible for the missing calls.
 
 Similarly to the compilation order section, not all call sites need to be annotated and not all call targets be listed. However, if other call targets are known but not emitted, then the frequency must be below 100 to inform the engine of the missing information.
+
+
+### Inlining
+
+An engine might decide to inline certain call targets based on the previous section, but explicit hints can be added per call target and per function using the following annotations.
+
+The `metadata.code.inline` section contains instruction level annotations for all affected call sites.
+  * *byte offset* |U32| from the beginning of the function to the wire byte index of the call instruction (this must be a `call`, `call_ref` or a `call_indirect`, otherwise the hint will be ignored)
+  * *hint length* |U32| with value 1
+  * *priority* |U32| between 0 (never inline) and 100 (always inline)
+
+Engines will always inline calls with a priority of 0 and may inline calls with a priority between 1 and 99 depending on resources, preferring the ones with a higher priority.
+
+If the *byte offset* is 0, the hint applies to all call sites where the function is the **target**. It serves as a shorthand notation unless explicitly overridden. *Note: This should likely be moved to a dedicated section for clearer separation, e.g. `metadata.function.inline` if such a namespace will be supported by custom annotations.*
+
+In case of conflicting information, an engine should follow the order
+  1. `metadata.code.inline`
+  2. `metadata.code.call_targets`
+with the first matching hint taking priority over following ones.
