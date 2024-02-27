@@ -22,8 +22,10 @@ Each family of hints is bundled in a respective custom section following the exa
   * *function index* |U32|
   * a vector of hints with entries
     * *byte offset* |U32| of the hinted instruction from the beginning of the function body (0 for function level hints),
-    * *hint length* |U32| indicating the number of values each hint requires,
+    * *hint length* |U32| indicating the number of bytes each hint requires,
     * *values* |U32| with the actual hint information
+
+If not specified otherwise, all numeric values are encoded using the [LEB128](https://en.wikipedia.org/wiki/LEB128) variable-length integer encoding either in its signed or unsigned variant.
 
 *Note: If custom annotations support a `metadata.function.*` namespace, the byte offset could be dropped for function-level annotations.*
 
@@ -34,11 +36,11 @@ The following contains a list of hints to be included in the first version of th
 
 The section `metadata.code.compilation_order` contains the order in which functions should be compiled in order to minimize wait times until the compilation is completed. This is especially relevant during instantiation and startup but might also be relevant later.
   * *byte offset* |U32| with value 0 (function level only)
-  * *hint length* |U32| with value 2
+  * *hint length* |U32| in bytes
   * *compilation order* |U32| starting at 0 (functions with the same order value will be compiled in an arbitrary order but before functions with a higher order value)
   * *hotness* |U32| defining how often this function is called
 
-If a length of larger than 2 is present, only the first two values of the following hint data is evalued while the rest is ignored. This leaves space for future extensions, e.g. grouping functions. Similarly, the *hotness* can be dropped if a length of 1 is given.
+If a length of larger than required to store 2 values is present, only the first two values of the following hint data is evalued while the rest is ignored. This leaves space for future extensions, e.g. grouping functions. Similarly, the *hotness* can be dropped if a length corresponds to only 1 value is given.
 
 The *hotness* attribute has no pre-defined meaning. The larger the value, to more often a function is expected to run. So an engine can simply order the functions by hotness and tier up the ones with the largest *hotness* until the compilation budget is exceeded. The compilation budget might depend on the engine, compiler, available resources, how long the program has been running, etc. The special value of 0 is reserved for functions that only run once (e.g. initialization functions). An engine can decide to interpret those functions only or to free up code space by removing the compiled code after execution. Applications can run sich a function multiple times, but they should not because this might come with severe performance penalties, e.g. for repeated recompilation, not ever getting tiered up, etc.
 
@@ -55,7 +57,7 @@ This is especially interesting if functions need to be compiled to the top tier 
 
 The `metadata.code.call_targets` section contains instruction level annotations for all relevant call targets identified by their function indexes.
   * *byte offset* |U32| from the beginning of the function to the wire byte index of the call instruction (this must be a `call_ref` or a `call_indirect`, otherwise the hint will be ignored)
-  * *hint length* |U32| (always even, 2 entries for each call target)
+  * *hint length* |U32| in bytes
   * call target information
     * *function index* |U32|
     * *call frequency* |U32| in percent
@@ -71,12 +73,27 @@ An engine might decide to inline certain call targets based on the previous sect
 
 The `metadata.code.inline` section contains instruction level annotations for all affected call sites.
   * *byte offset* |U32| from the beginning of the function to the wire byte index of the call instruction (this must be a `call`, `call_ref` or a `call_indirect`, otherwise the hint will be ignored)
-  * *hint length* |U32| with value 1
-  * *priority* |U32| between 0 (never inline) and 100 (always inline)
+  * *hint length* |U32| in bytes (always 1 for now, might be higher for future extensions)
+  * *log call frequency* |U8| determining the estimated number of times the callee gets called per call of the caller.
 
-Engines will always inline calls with a priority of 0 and may inline calls with a priority between 1 and 99 depending on resources, preferring the ones with a higher priority.
+The call frequency can be thought of the estimated number of times a callee gets called during one call of the caller. It is a logarithmic value based on the formula $f = \max(1, \min(126, 10 \log_{10} \frac{n}{N} + 32))$ where $n$ is the number of callee calls from this call site and $N$ is the number of caller calls.
 
-If the *byte offset* is 0, the hint applies to all call sites where the function is the **target**. It serves as a shorthand notation unless explicitly overridden. *Note: This should likely be moved to a dedicated section for clearer separation, e.g. `metadata.function.inline` if such a namespace will be supported by custom annotations.*
+The actual decision which function should be inlined can be based on runtime data that the engine collected, additional heuristics and available resources. There is no guarantee that a function is or is not inlined, but it should roughly be expected that functions of higher call frequency are prefered over ones with lower frequency.
+Special values of 0 and +127 indicate that a function should never or always be inlined respectively. Engines should respect such annotations over their own heuristics and toolchains should therefore avoid generating such annotations unless there is a good reason for it (e.g. "no inline" annotations in the source).
+
+|log call frequency|calls per parent call|
+|-----------------:|:-------------------:|
+|                 0|       *never inline*|
+|                 1|              <0.0008|
+|                22|               0.1   |
+|                32|               1     |
+|                42|              10     |
+|                52|             100     |
+|                62|           1,000     |
+|               126|  >2,511,886,432     |
+|               127|      *always inline*|
+
+If the *byte offset* is 0, the hint applies to all call sites where the function is the **target**. It serves as a shorthand notation unless explicitly overridden. In this case, the call frequency should be a rough estimate of the average call frequency of all potential sites. *Note: This should likely be moved to a dedicated section for clearer separation, e.g. `metadata.function.inline` if such a namespace will be supported by custom annotations.*
 
 In case of conflicting information, an engine should follow the order
   1. `metadata.code.inline`
