@@ -49,24 +49,6 @@ It is expected and even desired that not all functions are annotated to keep thi
 *Note: This should be moved to `metadata.function.compilation_order` without the byte offset if such a namespace will be supported by custom annotations.*
 
 
-### Call targets
-
-When dealing with `call_indirect` or `call_ref`, often inefficient code is generated, because inlining is not possible. With code that e.g. uses virtual function calls, there are often very few commonly called targets which a compiler could optimize for. It still needs to have the ability to handle other call targets, but that can then happen at a much lower performance in favor of optimizing for the more commonly called target.
-
-This is especially interesting if functions need to be compiled to the top tier early on, either because they're annotated with a low compilation order, because eager compilation or even AOT compilation is desired.
-
-The `metadata.code.call_targets` section contains instruction level annotations for all relevant call targets identified by their function indexes.
-  * *byte offset* |U32| from the beginning of the function to the wire byte index of the call instruction (this must be a `call_ref` or a `call_indirect`, otherwise the hint will be ignored)
-  * *hint length* |U32| in bytes
-  * call target information
-    * *function index* |U32|
-    * *call frequency* |U32| in percent
-
-The accumulated call frequency must add up to 100 or less. If it is less than 100, then other call targets that are not listed are responsible for the missing calls.
-
-Similarly to the compilation order section, not all call sites need to be annotated and not all call targets be listed. However, if other call targets are known but not emitted, then the frequency must be below 100 to inform the engine of the missing information.
-
-
 ### Inlining
 
 An engine might decide to inline certain call targets based on the previous section, but explicit hints can be added per call target and per function using the following annotations.
@@ -99,3 +81,21 @@ In case of conflicting information, an engine should follow the order
   1. `metadata.code.inline`
   2. `metadata.code.call_targets`
 with the first matching hint taking priority over following ones.
+
+
+### Call targets
+
+When dealing with `call_indirect` or `call_ref`, often inefficient code is generated, because inlining is not possible. With code that e.g. uses virtual function calls, there are often very few commonly called targets which a compiler could optimize for. It still needs to have the ability to handle other call targets, but that can then happen at a much lower performance in favor of optimizing for the more commonly called target.
+
+This is especially interesting if functions need to be compiled to the top tier early on, either because they're annotated with a low compilation order, because eager compilation or even AOT compilation is desired.
+
+The `metadata.code.call_targets` section contains instruction level annotations for all relevant call targets identified by their function indexes.
+  * *byte offset* |U32| from the beginning of the function to the wire byte index of the call instruction (this must be a `call_ref` or a `call_indirect`, otherwise the hint will be ignored)
+  * *hint length* |U32| in bytes
+  * call target information
+    * *function index* |U32|
+    * *call frequency* |U32| in percent
+
+The accumulated call frequency must add up to 100 or less. If it is less than 100, then other call targets that are not listed are responsible for the missing calls.
+
+Similarly to the compilation order section, not all call sites need to be annotated and not all call targets be listed. However, if other call targets are known but not emitted, then the frequency must be below 100 to inform the engine of the missing information.
