@@ -21,7 +21,7 @@ Based on the [branch hinting proposal](https://github.com/WebAssembly/branch-hin
 Each family of hints is bundled in a respective custom section following the example of branch hints. These sections all have the naming convention `metadata.code.*` and follow the structure
   * *function index* |U32|
   * a vector of hints with entries
-    * *byte offset* |U32| of the hinted instruction from the beginning of the function body (0 for function level hints),
+    * *byte offset* |U32| of the hinted instruction from the beginning of the function body (0 for function level hints) (the function body begins at the first byte of its local declarations, the same as branch hints),
     * *hint length* |U32| indicating the number of bytes each hint requires,
     * *values* |U32| with the actual hint information
 
@@ -42,9 +42,9 @@ The section `metadata.code.compilation_order` contains the order in which functi
 
 If a length of larger than required to store 2 values is present, only the first two values of the following hint data is evalued while the rest is ignored. This leaves space for future extensions, e.g. grouping functions. Similarly, the *hotness* can be dropped if a length corresponds to only 1 value is given.
 
-The *hotness* attribute has no pre-defined meaning. The larger the value, to more often a function is expected to run. So an engine can simply order the functions by hotness and tier up the ones with the largest *hotness* until the compilation budget is exceeded. The compilation budget might depend on the engine, compiler, available resources, how long the program has been running, etc. The special value of 0 is reserved for functions that only run once (e.g. initialization functions). An engine can decide to interpret those functions only or to free up code space by removing the compiled code after execution. Applications can run sich a function multiple times, but they should not because this might come with severe performance penalties, e.g. for repeated recompilation, not ever getting tiered up, etc.
+The *hotness* attribute has no pre-defined meaning. The larger the value, to more often a function is expected to run. So an engine can simply order the functions by hotness and tier up the ones with the largest *hotness* until the compilation budget is exceeded. The compilation budget might depend on the engine, compiler, available resources, how long the program has been running, etc. The special value of 0 is reserved for functions that only run once (e.g. initialization functions). An engine can decide to interpret those functions only or to free up code space by removing the compiled code after execution. Applications can run such a function multiple times, but they should not because this might come with severe performance penalties, e.g. for repeated recompilation, not ever getting tiered up, etc.
 
-It is expected and even desired that not all functions are annotated to keep this section small. It is up to th engine if and when the unannotated functions are compiled. It's recommended that these functions get compiled last or lazily on demand.
+It is expected and even desired that not all functions are annotated to keep this section small. It is up to the engine if and when the unannotated functions are compiled. It's recommended that these functions get compiled last or lazily on demand.
 
 *Note: This should be moved to `metadata.function.compilation_order` without the byte offset if such a namespace will be supported by custom annotations.*
 
