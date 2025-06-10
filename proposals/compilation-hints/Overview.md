@@ -62,15 +62,15 @@ Instruction frequencies are always relative to the surrounding function and ther
 
 For now, we expect annotations to only affect `call`, `call_ref`, `call_indirect` and `loop` instructions. Tools can focus on providing annotations for these instruction to make sure they have the expected impact without unnecessary binary bloat. In the future, this can be extended to more instructions if needed. The structure and the name of this annotation has been specifically chosen to allow for that.
 
-The instruction frequency can be thought of the estimated number of times a callee gets called during one call of the caller. It is a logarithmic value based on the formula $f = \max(1, \min(64, \log_{2} \frac{n}{N} + 32))$ where $n$ is the number of callee calls from this call site and $N$ is the number of caller calls.
+The instruction frequency can be thought of the estimated number of times a callee gets called during one call of the caller. It is a logarithmic value based on the formula $f = \max(1, \min(64, \lfloor \log_{2} \frac{n}{N} \rfloor + 32))$ where $n$ is the total number of executions of this instruction and $N$ is the number of calls to this function.
 
 The main expected use of this hint by engines it to guide inlining decisions. However the actual decision which function should be inlined can be based on runtime data that the engine collected, additional heuristics and available resources. There is no guarantee that a function is or is not inlined, but it should roughly be expected that functions of higher call frequency are prefered over ones with lower frequency.
 Special values of 0 and 127 indicate that a function should never or always be inlined respectively. Engines should respect such annotations over their own heuristics and toolchains should therefore avoid generating such annotations unless there is a good reason for it (e.g. "no inline" annotations in the source).
 
 |binary value|log2 call frequency|calls per parent call|
 |-----------:|------------------:|:-------------------:|
-|           0|                   |*never inline*       |
-|           1|                -31|           <4.657e-10|
+|           0|                   |*cold*               |
+|           1|                -31|           <9.313e-10|
 |           8|                -24|            5.960e-08|
 |          16|                -16|            1.526e-05|
 |          24|                 -8|            0.00391  |
@@ -85,9 +85,7 @@ Special values of 0 and 127 indicate that a function should never or always be i
 |          48|                +16|        65536        |
 |          56|                +24|            1.678e+07|
 |          64|                +32|           >4.295e+09|
-|         127|                   |*always inline*      |
-
-If the *byte offset* is 0, the hint applies to all call sites where the function is the **target**. It serves as a shorthand notation unless explicitly overridden. In this case, the call frequency should be a rough estimate of the average call frequency of all potential sites. *Note: This should likely be moved to a dedicated section for clearer separation, e.g. `metadata.function.inline` if such a namespace will be supported by custom annotations.*
+|         127|                   |*hot*                |
 
 
 ### Call targets
