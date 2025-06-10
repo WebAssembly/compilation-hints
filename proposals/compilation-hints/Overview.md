@@ -53,8 +53,8 @@ It is expected and even desired that not all functions are annotated to keep thi
 
 Instruction frequencies might be useful to guide optimizations like inlining, loop unrolling, block deferrals, etc. Within a function, these frequencies inform which blocks lie on the hot path and deserve more expensive optimizations, as well as which are on the cold path and might even allow very expensive steps to even execute the code within (e.g. outlining or de-optimization). An engine can take those decisisions based on the call frequency observed, but cannot assume that any part of the code is unreachable based on the call frequency.
 
-The `metadata.code.instr_freq` section contains block level annotations for all potential branches.
-  * *byte offset* |U32| from the beginning of the function to the wire byte index of the start of the block.
+The `metadata.code.instr_freq` section contains instruction level annotations for optimizable instruction dequences.
+  * *byte offset* |U32| from the beginning of the function to the wire byte index of an instruction (e.g. start of a loop or a block containing a call instruction).
   * *hint length* |U32| in bytes (always 1 for now, might be higher for future extensions)
   * *offset log2 call frequency* |U8| determining the estimated number of times the callee gets called per call of the caller.
 
@@ -100,12 +100,8 @@ The `metadata.code.call_targets` section contains instruction level annotations 
   * *byte offset* |U32| from the beginning of the function to the wire byte index of the call instruction (this must be a `call_ref` or a `call_indirect`, otherwise the hint will be ignored)
   * *hint length* |U32| in bytes
   * call target information
-    * *call target type* |U32|
     * *function index* |U32|
     * *call frequency* |U32| in percent
 
-The call target type is always 0 (target within same module) for now and serves as a placeholder for future support of other targets (e.g. functions in other modules, embedder provided functions, etc.). If an unknown call target type is read, the rest of the information for this site is skipped. It therefore makes sense to list all the call targets of type 0 first.
-
 The accumulated call frequency must add up to 100 or less. If it is less than 100, then other call targets that are not listed are responsible for the missing calls. Together with the inline hints on call frequency, this can information can be used to inline function calls as well. The effective call frequency for each call target is then the inlining call frequency multiplied by the fractional call frequency encoded in this section.
 
-Similarly to the compilation order section, not all call sites need to be annotated and not all call targets be listed. However, if other call targets are known but not emitted (or of an unsupported type), then the frequency must be below 100 to inform the engine of the missing information.
