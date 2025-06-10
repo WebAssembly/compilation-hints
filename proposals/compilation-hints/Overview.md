@@ -53,18 +53,18 @@ It is expected and even desired that not all functions are annotated to keep thi
 
 Instruction frequencies might be useful to guide optimizations like inlining, loop unrolling, block deferrals, etc. Within a function, these frequencies inform which blocks lie on the hot path and deserve more expensive optimizations, as well as which are on the cold path and might even allow very expensive steps to even execute the code within (e.g. outlining or de-optimization). An engine can take those decisisions based on the call frequency observed, but cannot assume that any part of the code is unreachable based on the call frequency.
 
-The `metadata.code.instr_freq` section contains instruction level annotations for optimizable instruction dequences.
+The `metadata.code.instr_freq` section contains instruction level annotations for optimizable instruction sequences.
   * *byte offset* |U32| from the beginning of the function to the wire byte index of an instruction (e.g. start of a loop or a block containing a call instruction).
   * *hint length* |U32| in bytes (always 1 for now, might be higher for future extensions)
-  * *offset log2 call frequency* |U8| determining the estimated number of times the callee gets called per call of the caller.
+  * *offset log2 frequency* |U8| determining the estimated number of times the instruction gets executed per execution of the containing function.
 
-Call frequencies are always relative to the surrounding function and therefore every instruction at the beginning of a function has an implicit frequency of 1 assigned to it. Each annotation remains valid for all following instructions until the next control flow instruction (`br`, `br_table`, `br_if`, `if`, `return`, `unreachable`, `br_catch`, `throw`).
+Instruction frequencies are always relative to the surrounding function and therefore every instruction at the beginning of a function has an implicit frequency of 1 assigned to it. Each annotation remains valid for all following instructions until the next control flow instruction (`br`, `br_table`, `br_if`, `if`, `return`, `unreachable`, `br_catch`, `throw`).
 
 For now, we expect annotations to only affect `call`, `call_ref`, `call_indirect` and `loop` instructions. Tools can focus on providing annotations for these instruction to make sure they have the expected impact without unnecessary binary bloat. In the future, this can be extended to more instructions if needed. The structure and the name of this annotation has been specifically chosen to allow for that.
 
 The instruction frequency can be thought of the estimated number of times a callee gets called during one call of the caller. It is a logarithmic value based on the formula $f = \max(1, \min(64, \log_{2} \frac{n}{N} + 32))$ where $n$ is the number of callee calls from this call site and $N$ is the number of caller calls.
 
-The actual decision which function should be inlined can be based on runtime data that the engine collected, additional heuristics and available resources. There is no guarantee that a function is or is not inlined, but it should roughly be expected that functions of higher call frequency are prefered over ones with lower frequency.
+The main expected use of this hint by engines it to guide inlining decisions. However the actual decision which function should be inlined can be based on runtime data that the engine collected, additional heuristics and available resources. There is no guarantee that a function is or is not inlined, but it should roughly be expected that functions of higher call frequency are prefered over ones with lower frequency.
 Special values of 0 and 127 indicate that a function should never or always be inlined respectively. Engines should respect such annotations over their own heuristics and toolchains should therefore avoid generating such annotations unless there is a good reason for it (e.g. "no inline" annotations in the source).
 
 |binary value|log2 call frequency|calls per parent call|
