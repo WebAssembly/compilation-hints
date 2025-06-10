@@ -37,7 +37,7 @@ The following contains a list of hints to be included in the first version of th
 The section `metadata.code.compilation_order` contains the order in which functions should be compiled in order to minimize wait times until the compilation is completed. This is especially relevant during instantiation and startup but might also be relevant later.
   * *byte offset* |U32| with value 0 (function level only)
   * *hint length* |U32| in bytes
-  * *compilation order* |U32| starting at 0 (functions with the same order value will be compiled in an arbitrary order but before functions with a higher order value)
+  * *compilation priority* |U32| starting at 0 (functions with the same order value will be compiled in an arbitrary order but before functions with a higher order value)
   * *hotness* |U32| defining how often this function is called
 
 If a length of larger than required to store 2 values is present, only the first two values of the following hint data is evalued while the rest is ignored. This leaves space for future extensions, e.g. grouping functions. Similarly, the *hotness* can be dropped if a length corresponds to only 1 value is given.
@@ -47,6 +47,22 @@ The *hotness* attribute has no pre-defined meaning. The larger the value, to mor
 It is expected and even desired that not all functions are annotated to keep this section small. It is up to the engine if and when the unannotated functions are compiled. It's recommended that these functions get compiled last or lazily on demand.
 
 *Note: This should be moved to `metadata.function.compilation_order` without the byte offset if such a namespace will be supported by custom annotations.*
+
+
+#### Text format
+
+The binary format can also be represented in text format using more a more human readable notation.
+```
+@metadata.code.compilation_order(
+  (priority 1)
+  (hotness 100)
+)
+```
+The above example is equivalent to
+```
+@metadata.code.compilation_order("\\01\\64")
+```
+and tools can produce one or the other.
 
 
 ### Instruction frequencies
@@ -88,6 +104,23 @@ Special values of 0 and 127 indicate that a function should never or always be i
 |         127|              |*always optimize*   |
 
 
+#### Text format
+
+The alternative text format representation for such a section would look as follows
+```
+@metadata.code.instr_freq(
+  (freq 123.45)
+)
+```
+The given frequency $\frac{n}{N}$ is then converted into the equivalent binary representation
+```
+@metadata.code.instr_freq("\\26")
+```
+according to the formula above.
+
+Alternatively to `freq` followed by a numeric value, one can provide `never_opt` and `always_opt` with binary representations of `"\\00"` and `"\\7f"` respectively.
+
+
 ### Call targets
 
 When dealing with `call_indirect` or `call_ref`, often inefficient code is generated, because the call target is unknown. With code that e.g. uses virtual function calls, there are often very few commonly called targets which a compiler could optimize for. It still needs to have the ability to handle other call targets, but that can then happen at a much lower performance in favor of optimizing for the more commonly called target.
@@ -104,3 +137,18 @@ The `metadata.code.call_targets` section contains instruction level annotations 
 The accumulated call frequency must add up to 100 or less. If it is less than 100, then other call targets that are not listed are responsible for the missing calls. Together with the inline hints on call frequency, this can information can be used to inline function calls as well. The effective call frequency for each call target is then the inlining call frequency multiplied by the fractional call frequency encoded in this section.
 
 Similarly to the compilation order section, not all call sites need to be annotated and not all call targets be listed. However, if other call targets are known but not emitted, then the frequency must be below 100 to inform the engine of the missing information.
+
+
+#### Text format
+
+The text representation allows for multiple targets
+```
+@metadata.code.call_targets(
+  (target $func1 0.73)
+  (target $func2 0.21)
+```
+which would be converted into binary format as
+```
+@metadata.code.call_targets("\\01\\49\\02\\15)
+```
+under the assumption that `$func1` and `$func2` have target indices 1 and 2 respectively.
