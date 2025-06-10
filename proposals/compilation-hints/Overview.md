@@ -105,3 +105,4 @@ The `metadata.code.call_targets` section contains instruction level annotations 
 
 The accumulated call frequency must add up to 100 or less. If it is less than 100, then other call targets that are not listed are responsible for the missing calls. Together with the inline hints on call frequency, this can information can be used to inline function calls as well. The effective call frequency for each call target is then the inlining call frequency multiplied by the fractional call frequency encoded in this section.
 
+Similarly to the compilation order section, not all call sites need to be annotated and not all call targets be listed. However, if other call targets are known but not emitted, then the frequency must be below 100 to inform the engine of the missing information.
