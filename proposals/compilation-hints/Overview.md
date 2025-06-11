@@ -60,7 +60,7 @@ The binary format can also be represented in text format using more a more human
 ```
 The above example is equivalent to
 ```
-@metadata.code.compilation_order("\\01\\64")
+@metadata.code.compilation_order("\01\64")
 ```
 and tools can produce one or the other.
 
@@ -114,11 +114,11 @@ The alternative text format representation for such a section would look as foll
 ```
 The given frequency $\frac{n}{N}$ is then converted into the equivalent binary representation
 ```
-@metadata.code.instr_freq("\\26")
+@metadata.code.instr_freq("\26")
 ```
 according to the formula above.
 
-Alternatively to `freq` followed by a numeric value, one can provide `never_opt` and `always_opt` with binary representations of `"\\00"` and `"\\7f"` respectively.
+Alternatively to `freq` followed by a numeric value, one can provide `never_opt` and `always_opt` with binary representations of `"\00"` and `"\7f"` respectively.
 
 
 ### Call targets
@@ -149,6 +149,6 @@ The text representation allows for multiple targets
 ```
 which would be converted into binary format as
 ```
-@metadata.code.call_targets("\\01\\49\\02\\15)
+@metadata.code.call_targets("\01\49\02\15)
 ```
 under the assumption that `$func1` and `$func2` have target indices 1 and 2 respectively.
