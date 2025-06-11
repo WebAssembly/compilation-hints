@@ -51,7 +51,7 @@ It is expected and even desired that not all functions are annotated to keep thi
 
 ### Instruction frequencies
 
-Instruction frequencies might be useful to guide optimizations like inlining, loop unrolling, block deferrals, etc. Within a function, these frequencies inform which blocks lie on the hot path and deserve more expensive optimizations, as well as which are on the cold path and might even allow very expensive steps to even execute the code within (e.g. outlining or de-optimization). An engine can take those decisisions based on the call frequency observed, but cannot assume that any part of the code is unreachable based on the call frequency.
+Instruction frequencies might be useful to guide optimizations like inlining, loop unrolling, block deferrals, etc. Within a function, these frequencies inform which blocks lie on the hot path and deserve more expensive optimizations, as well as which are on the cold path and might even allow very expensive steps to even execute the code within (e.g. outlining or de-optimization). An engine can take those decisisions based on the instruction frequency observed, but cannot assume that any part of the code is unreachable based on the instruction frequency.
 
 The `metadata.code.instr_freq` section contains instruction level annotations for optimizable instruction sequences.
   * *byte offset* |U32| from the beginning of the function to the wire byte index of an instruction (e.g. start of a loop or a block containing a call instruction).
@@ -62,30 +62,30 @@ Instruction frequencies are always relative to the surrounding function and ther
 
 For now, we expect annotations to only affect `call`, `call_ref`, `call_indirect` and `loop` instructions. Tools can focus on providing annotations for these instruction to make sure they have the expected impact without unnecessary binary bloat. In the future, this can be extended to more instructions if needed. The structure and the name of this annotation has been specifically chosen to allow for that.
 
-The instruction frequency can be thought of the estimated number of times a callee gets called during one call of the caller. It is a logarithmic value based on the formula $f = \max(1, \min(64, \lfloor \log_{2} \frac{n}{N} \rfloor + 32))$ where $n$ is the total number of executions of this instruction and $N$ is the number of calls to this function.
+The instruction frequency can be thought of the estimated number of times an instruction gets executed during one call of the function. It is a logarithmic value based on the formula $f = \max(1, \min(64, \lfloor \log_{2} \frac{n}{N} \rfloor + 32))$ where $n$ is the total number of executions of this instruction and $N$ is the number of calls to this function.
 
 The main expected use of this hint by engines it to guide inlining decisions. However the actual decision which function should be inlined can be based on runtime data that the engine collected, additional heuristics and available resources. There is no guarantee that a function is or is not inlined, but it should roughly be expected that functions of higher call frequency are prefered over ones with lower frequency.
 Special values of 0 and 127 indicate that a function should never or always be inlined respectively. Engines should respect such annotations over their own heuristics and toolchains should therefore avoid generating such annotations unless there is a good reason for it (e.g. "no inline" annotations in the source).
 
-|binary value|log2 call frequency|calls per parent call|
-|-----------:|------------------:|:-------------------:|
-|           0|                   |*cold*               |
-|           1|                -31|           <9.313e-10|
-|           8|                -24|            5.960e-08|
-|          16|                -16|            1.526e-05|
-|          24|                 -8|            0.00391  |
-|          28|                 -4|            0.0625   |
-|          30|                 -2|            0.25     |
-|          31|                 -1|            0.5      |
-|          32|                  0|            1        |
-|          33|                 +1|            2        |
-|          34|                 +2|            4        |
-|          36|                 +4|           16        |
-|          40|                 +8|          256        |
-|          48|                +16|        65536        |
-|          56|                +24|            1.678e+07|
-|          64|                +32|           >4.295e+09|
-|         127|                   |*hot*                |
+|binary value|log2 frequency|executions per call|
+|-----------:|-------------:|:------------------:|
+|           0|              |*never optimize*    |
+|           1|           -31|          <9.313e-10|
+|           8|           -24|           5.960e-08|
+|          16|           -16|           1.526e-05|
+|          24|            -8|           0.00391  |
+|          28|            -4|           0.0625   |
+|          30|            -2|           0.25     |
+|          31|            -1|           0.5      |
+|          32|             0|           1        |
+|          33|            +1|           2        |
+|          34|            +2|           4        |
+|          36|            +4|          16        |
+|          40|            +8|         256        |
+|          48|           +16|       65536        |
+|          56|           +24|           1.678e+07|
+|          64|           +32|          >4.295e+09|
+|         127|              |*always optimize*   |
 
 
 ### Call targets
