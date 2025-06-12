@@ -53,14 +53,11 @@ It is expected and even desired that not all functions are annotated to keep thi
 
 Instead of a binary string representation, these hints can also be provided using a more human readable notation in text format:
 ```
-@metadata.code.compilation_order(
-  (priority 1)
-  (hotness 100)
-)
+(@metadata.code.compilation_order (priority 1) (hotness 100))
 ```
 The above example is equivalent to
 ```
-@metadata.code.compilation_order("\01\64")
+(@metadata.code.compilation_order "\01\64")
 ```
 and tools can produce one or the other.
 
@@ -108,13 +105,11 @@ Special values of 0 and 127 indicate that a function should never or always be i
 
 The alternative text format representation for such a section would look as follows
 ```
-@metadata.code.instr_freq(
-  (freq 123.45)
-)
+(@metadata.code.instr_freq (freq 123.45))
 ```
 The given frequency $\frac{n}{N}$ is then converted into the equivalent binary representation
 ```
-@metadata.code.instr_freq("\26")
+(@metadata.code.instr_freq "\26")
 ```
 according to the formula above.
 
@@ -143,13 +138,10 @@ Similarly to the compilation order section, not all call sites need to be annota
 
 The text representation allows for multiple targets
 ```
-@metadata.code.call_targets(
-  (target $func1 0.73)
-  (target $func2 0.21)
-)
+(@metadata.code.call_targets (target $func1 0.73) (target $func2 0.21))
 ```
 which would be converted into binary format as
 ```
-@metadata.code.call_targets("\01\49\02\15)
+(@metadata.code.call_targets "\01\49\02\15)
 ```
 under the assumption that `$func1` and `$func2` have function indices 1 and 2 respectively.
