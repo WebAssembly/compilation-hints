@@ -51,7 +51,7 @@ It is expected and even desired that not all functions are annotated to keep thi
 
 #### Text format
 
-The binary format can also be represented in text format using more a more human readable notation.
+Instead of a binary string representation, these hints can also be provided using a more human readable notation in text format:
 ```
 @metadata.code.compilation_order(
   (priority 1)
@@ -146,9 +146,10 @@ The text representation allows for multiple targets
 @metadata.code.call_targets(
   (target $func1 0.73)
   (target $func2 0.21)
+)
 ```
 which would be converted into binary format as
 ```
 @metadata.code.call_targets("\01\49\02\15)
 ```
-under the assumption that `$func1` and `$func2` have target indices 1 and 2 respectively.
+under the assumption that `$func1` and `$func2` have function indices 1 and 2 respectively.
