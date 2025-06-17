@@ -37,7 +37,7 @@ The following contains a list of hints to be included in the first version of th
 The section `metadata.code.compilation_order` contains the order in which functions should be compiled in order to minimize wait times until the compilation is completed. This is especially relevant during instantiation and startup but might also be relevant later.
   * *byte offset* |U32| with value 0 (function level only)
   * *hint length* |U32| in bytes
-  * *compilation priority* |U32| starting at 0 (functions with the same order value will be compiled in an arbitrary order but before functions with a higher order value)
+  * *compilation priority* |U32| starting at 0 (functions with the same priority value will be compiled in an arbitrary order but before functions with a higher priority value)
   * *hotness* |U32| defining how often this function is called
 
 If a length of larger than required to store 2 values is present, only the first two values of the following hint data is evalued while the rest is ignored. This leaves space for future extensions, e.g. grouping functions. Similarly, the *hotness* can be dropped if a length corresponds to only 1 value is given.
