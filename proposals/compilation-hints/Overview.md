@@ -65,7 +65,7 @@ The above example is equivalent to
 ```
 and tools can produce one or the other.
 
-To produce the special value of 127 for the optimization value, one can pass `run_once` without any number instead of the `optimization` order.
+To produce the special value of 127 for the optimization value, one can pass `run_once` without any number instead of the `optimization` annotation.
 
 
 ### Instruction frequencies
