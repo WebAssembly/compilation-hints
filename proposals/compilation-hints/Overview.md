@@ -20,7 +20,7 @@ Based on the [branch hinting proposal](https://github.com/WebAssembly/branch-hin
 
 Each family of hints is bundled in a respective custom section following the example of branch hints. These sections all have the naming convention `metadata.code.*` and follow the structure
   * *function index* |U32|
-  * a vector of hints with entries
+  * a vector of hints with entries (starting with the number of entries as |U32|)
     * *byte offset* |U32| of the hinted instruction from the beginning of the function body (0 for function level hints) (the function body begins at the first byte of its local declarations, the same as branch hints),
     * *hint length* |U32| indicating the number of bytes each hint requires,
     * *values* |U32| with the actual hint information
@@ -32,34 +32,47 @@ If not specified otherwise, all numeric values are encoded using the [LEB128](ht
 The following contains a list of hints to be included in the first version of the proposal. Future extensions can be added as necessity arises. This also includes annotations outside of function or instruction level like annotations for memories, etc.
 
 
-### Compilation order
+### Compilation priority
 
-The section `metadata.code.compilation_order` contains the order in which functions should be compiled in order to minimize wait times until the compilation is completed. This is especially relevant during instantiation and startup but might also be relevant later.
+The section `metadata.code.compilation_priority` contains the priority in which functions should be compiled in order to minimize wait times until the compilation is completed. This is especially relevant during instantiation and startup but might also be relevant later. Additionally, each function can be annotated with an optimization priority, an estimation of the function's hotness.
   * *byte offset* |U32| with value 0 (function level only)
   * *hint length* |U32| in bytes
   * *compilation priority* |U32| starting at 0 (functions with the same priority value will be compiled in an arbitrary order but before functions with a higher priority value)
-  * *hotness* |U32| defining how often this function is called
+  * *optimization priority* |U32| (optional) the estimated negative logarithmic probability that this function is found on top of the execution stack at any given point in time
 
-If a length of larger than required to store 2 values is present, only the first two values of the following hint data is evalued while the rest is ignored. This leaves space for future extensions, e.g. grouping functions. Similarly, the *hotness* can be dropped if a length corresponds to only 1 value is given.
+If a length of larger than required to store the 2 values is present, only the first two values of the following hint data is evalued while the rest is ignored. This leaves space for future extensions, e.g. grouping functions. Similarly, the *optimization priority* can be dropped if a length corresponding to only 1 value is given.
 
-The *hotness* attribute has no pre-defined meaning. The larger the value, to more often a function is expected to run. So an engine can simply order the functions by hotness and tier up the ones with the largest *hotness* until the compilation budget is exceeded. The compilation budget might depend on the engine, compiler, available resources, how long the program has been running, etc. The special value of 0 is reserved for functions that only run once (e.g. initialization functions). An engine can decide to interpret those functions only or to free up code space by removing the compiled code after execution. Applications can run such a function multiple times, but they should not because this might come with severe performance penalties, e.g. for repeated recompilation, not ever getting tiered up, etc.
+The *optimization priority* has no clear implication on whether a function is tiered up using a more optimized compiler. The smaller the value, the more often a function is expected to be running. So an engine can simply order the functions by priority and tier up the ones with the smallest *optimization priority* until the compilation budget is exceeded. The compilation budget might depend on the engine, compiler, available resources, how long the program has been running, etc. Using a threshold might look easier but relies heavily on the accuracy of the estimation, making it potentially less reliable.
+
+During profiling runs, engines can generate the *optimization priority* easily based on either sampling based profiling by simply counting the number of samples where the function is on top or through explicit instrumentation of counters. The latter is a little more contrived. Function call counters alone might not be sufficient to estimate this as the total time spent within a function also heavily depends on its size and jumps within the function. It's therefore a good idea to at least estimate the time spent by adding counters to loops which multiplied by the loop size might be a sufficiently accurate estimator of instructions executed.
+
+The special value of 127 is reserved for functions that only run once (e.g. initialization functions). An engine can decide to interpret those functions only or to free up code space by removing the compiled code after execution. Applications are allowed to run such a function multiple times, but they should expect severe performance penalties, e.g. for repeated recompilation, not ever getting tiered up, etc.
 
 It is expected and even desired that not all functions are annotated to keep this section small. It is up to the engine if and when the unannotated functions are compiled. It's recommended that these functions get compiled last or lazily on demand.
 
-*Note: This should be moved to `metadata.function.compilation_order` without the byte offset if such a namespace will be supported by custom annotations.*
+*Note: This should be moved to `metadata.function.compilation_priority` without the byte offset if such a namespace will be supported by custom annotations.*
 
 
 #### Text format
 
 Instead of a binary string representation, these hints can also be provided using a more human readable notation in text format:
 ```
-(@metadata.code.compilation_order (priority 1) (hotness 100))
+(@metadata.code.compilation_priority (compilation 1) (optimization 10))
 ```
 The above example is equivalent to
 ```
-(@metadata.code.compilation_order "\01\64")
+(@metadata.code.compilation_order "\01\0A")
 ```
 and tools can produce one or the other.
+
+To produce the special value of 127 for the optimization value, one can pass `run_once` without any number instead of the `optimization` annotation, e.g.
+```
+(@metadata.code.compilation_priority (compilation 1) (run_once))
+```
+for
+```
+(@metadata.code.compilation_order "\01\1F")
+```
 
 
 ### Instruction frequencies
