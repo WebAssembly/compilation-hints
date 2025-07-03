@@ -20,7 +20,7 @@ Based on the [branch hinting proposal](https://github.com/WebAssembly/branch-hin
 
 Each family of hints is bundled in a respective custom section following the example of branch hints. These sections all have the naming convention `metadata.code.*` and follow the structure
   * *function index* |U32|
-  * a vector of hints with entries
+  * a vector of hints with entries (starting with the number of entries as |U32|)
     * *byte offset* |U32| of the hinted instruction from the beginning of the function body (0 for function level hints) (the function body begins at the first byte of its local declarations, the same as branch hints),
     * *hint length* |U32| indicating the number of bytes each hint requires,
     * *values* |U32| with the actual hint information
@@ -42,7 +42,7 @@ The section `metadata.code.compilation_priority` contains the priority in which 
 
 If a length of larger than required to store the 2 values is present, only the first two values of the following hint data is evalued while the rest is ignored. This leaves space for future extensions, e.g. grouping functions. Similarly, the *optimization priority* can be dropped if a length corresponding to only 1 value is given.
 
-The *optimization priority* has no clear implication on whether a function is tiered up using a more optimized compiler. The smaller the value, to more often a function is expected to be running. So an engine can simply order the functions by priority and tier up the ones with the smallest *optimization priority* until the compilation budget is exceeded. The compilation budget might depend on the engine, compiler, available resources, how long the program has been running, etc. Using a threshold might look easier but relies heavily on the accuracy of the estimation, making it potentially less reliable.
+The *optimization priority* has no clear implication on whether a function is tiered up using a more optimized compiler. The smaller the value, the more often a function is expected to be running. So an engine can simply order the functions by priority and tier up the ones with the smallest *optimization priority* until the compilation budget is exceeded. The compilation budget might depend on the engine, compiler, available resources, how long the program has been running, etc. Using a threshold might look easier but relies heavily on the accuracy of the estimation, making it potentially less reliable.
 
 During profiling runs, engines can generate the *optimization priority* easily based on either sampling based profiling by simply counting the number of samples where the function is on top or through explicit instrumentation of counters. The latter is a little more contrived. Function call counters alone might not be sufficient to estimate this as the total time spent within a function also heavily depends on its size and jumps within the function. It's therefore a good idea to at least estimate the time spent by adding counters to loops which multiplied by the loop size might be a sufficiently accurate estimator of instructions executed.
 
@@ -65,7 +65,14 @@ The above example is equivalent to
 ```
 and tools can produce one or the other.
 
-To produce the special value of 127 for the optimization value, one can pass `run_once` without any number instead of the `optimization` annotation.
+To produce the special value of 127 for the optimization value, one can pass `run_once` without any number instead of the `optimization` annotation, e.g.
+```
+(@metadata.code.compilation_priority (compilation 1) (run_once))
+```
+for
+```
+(@metadata.code.compilation_order "\01\1F")
+```
 
 
 ### Instruction frequencies
