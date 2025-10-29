@@ -61,7 +61,7 @@ Instead of a binary string representation, these hints can also be provided usin
 ```
 The above example is equivalent to
 ```
-(@metadata.code.compilation_order "\01\0A")
+(@metadata.code.compilation_priority "\01\0A")
 ```
 and tools can produce one or the other.
 
@@ -71,7 +71,7 @@ To produce the special value of 127 for the optimization value, one can pass `ru
 ```
 for
 ```
-(@metadata.code.compilation_order "\01\1F")
+(@metadata.code.compilation_priority "\01\1F")
 ```
 
 
@@ -155,6 +155,6 @@ The text representation allows for multiple targets
 ```
 which would be converted into binary format as
 ```
-(@metadata.code.call_targets "\01\49\02\15)
+(@metadata.code.call_targets "\01\49\02\15")
 ```
 under the assumption that `$func1` and `$func2` have function indices 1 and 2 respectively.
